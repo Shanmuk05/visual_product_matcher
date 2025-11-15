@@ -1,0 +1,11 @@
+streamlit
+transformers
+torch
+ftfy
+regex
+tqdm
+pillow
+scikit-learn
+pandas
+numpy
+requests

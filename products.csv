@@ -1,0 +1,6 @@
+id,name,category,image_path
+1,Nike Shoe,General,images/nike_shoe.jpg
+2,Adidas Shoe,General,images/adidas_shoe.jpg
+3,Casio Watch,General,images/casio_watch.jpg
+4,Leather Bag,General,images/leather_bag.jpg
+5,Sunglasses,General,images/sunglasses.jpg
