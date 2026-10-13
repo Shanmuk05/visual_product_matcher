@@ -11,7 +11,7 @@ st.set_page_config(page_title="Visual Product Matcher", page_icon="🔎", layout
 st.markdown("""
 <style>
 .stApp {
-     background-image: url("C:/Users/Rishika Reddy D/Downloads/bg.jpg");
+     background: linear-gradient(135deg,#eaf2ff 0%,#f7fbff 60%,#eef4ff 100%);
      background-size: cover;
      background-position: center;
      background-attachment: fixed;              
@@ -132,7 +132,6 @@ else:
     with st.spinner("Processing..."):
         features = load_features("features_clip.pkl")
         vec = extract_features_pil(query_img)
-        features = load_features("features_clip.pkl")
 
         import numpy as np
        
