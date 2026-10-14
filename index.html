@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Visual Product Matcher — Atchutha Sai Kiran</title>
+<meta name="description" content="Find visually similar products from an image using OpenAI CLIP — running entirely in your browser." />
+<meta name="theme-color" content="#0b1a12" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#f4f1e8;--soft:rgba(244,241,232,.72);--faint:rgba(244,241,232,.46);--gold:#f6c56b;--gold2:#e39b3c;--moss:#9fd8a5;--glass:rgba(10,24,18,.55);--line:rgba(255,255,255,.14);--serif:"Fraunces",Georgia,serif;--sans:"Manrope",system-ui,sans-serif;--mono:"JetBrains Mono",monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);line-height:1.6;min-height:100vh;
+background:radial-gradient(ellipse at 70% -10%,#1c3a2a,transparent 55%),linear-gradient(180deg,#0c1d14 0%,#0a1912 55%,#06100b 100%);background-attachment:fixed}
+a{color:var(--gold)}
+.wrap{max-width:980px;margin:0 auto;padding:clamp(24px,5vw,56px) clamp(16px,4vw,32px)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.back{font:600 13px var(--mono);color:var(--soft);text-decoration:none;border:1px solid var(--line);padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.05)}
+.back:hover{background:rgba(255,255,255,.12)}
+.tag{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:28px 0 10px}
+h1{font-family:var(--serif);font-weight:800;font-size:clamp(34px,6vw,62px);line-height:1.02;letter-spacing:-.02em}
+h1 em{font-style:italic;font-weight:300;background:linear-gradient(100deg,#fff6dc,var(--gold) 45%,#ff9f6e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{color:var(--soft);max-width:660px;margin-top:14px;font-size:17px}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:22px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
+.panel{padding:clamp(20px,3vw,34px);margin-top:28px}
+.status{display:flex;align-items:center;gap:12px;font:500 14px var(--sans);color:var(--soft);margin-bottom:18px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
+.dot.load{animation:pulse 1.2s infinite}.dot.ok{background:var(--moss);box-shadow:0 0 12px var(--moss)}
+@keyframes pulse{50%{opacity:.25}}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:620px){.inputs{grid-template-columns:1fr}}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:.2s;background:rgba(0,0,0,.2)}
+.drop:hover,.drop.over{border-color:var(--gold);background:rgba(246,197,107,.06)}
+.drop .big{font-size:30px}.drop .t{color:var(--soft);margin-top:8px;font-size:14px}
+.field label{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:6px}
+.field input{width:100%;font:500 15px var(--sans);color:var(--ink);background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
+.field input:focus{border-color:var(--gold)}
+.field .hint{color:var(--faint);font-size:12px;margin-top:8px}
+.preview{display:flex;gap:18px;align-items:center;margin-top:20px}
+.preview img{width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;font:600 15px var(--sans);cursor:pointer;border:1px solid transparent;transition:transform .2s,box-shadow .2s,background .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+.btn-primary{color:#1a1205;background:linear-gradient(135deg,#ffe0a0,var(--gold) 45%,var(--gold2));box-shadow:0 10px 30px -8px rgba(246,170,80,.6)}
+.results{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px}
+@media(max-width:620px){.results{grid-template-columns:1fr 1fr}}
+.res{padding:18px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);text-align:center;position:relative}
+.res.top{border-color:rgba(246,197,107,.6);background:rgba(246,197,107,.08)}
+.res .emoji{font-size:30px}
+.res .name{font-family:var(--serif);font-weight:600;font-size:17px;margin-top:6px}
+.res .score{font:600 12px var(--mono);color:var(--gold);margin-top:6px}
+.res .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:10px;overflow:hidden}
+.res .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold2),var(--gold))}
+.muted{color:var(--faint);font-size:13px}
+.foot{margin-top:40px;text-align:center;font:500 12px var(--mono);color:var(--faint)}
+h2{font-family:var(--serif);font-weight:600;font-size:24px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="https://shanmuk05.github.io">← Back to portfolio</a>
+    <a class="back" href="https://github.com/Shanmuk05/visual_product_matcher" target="_blank" rel="noopener">⌥ Source code ↗</a>
+  </div>
+
+  <p class="tag">Computer Vision · CLIP runs in your browser</p>
+  <h1>Visual Product <em>Matcher</em></h1>
+  <p class="lede">Upload or paste a product image and OpenAI's <strong>CLIP</strong> model finds the most visually similar items in a 44-product catalog by comparing image embeddings — all computed locally in your browser. Nothing is uploaded to a server.</p>
+
+  <div class="glass panel">
+    <div class="status"><span class="dot load" id="dot"></span><span id="statusTxt">Loading the CLIP vision model (first load downloads ~85 MB, once)…</span></div>
+    <div class="inputs">
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="image/*" hidden>
+        <div class="big">📸</div>
+        <div class="t"><strong>Click or drop</strong> a product image</div>
+      </label>
+      <div class="field">
+        <label>…or paste an image URL</label>
+        <input type="text" id="url" placeholder="https://…/photo.jpg">
+        <div class="hint">Tip: right-click any product image online → “Copy image address”.</div>
+      </div>
+    </div>
+    <div class="preview" id="preview" style="display:none">
+      <img id="previewImg" alt="query">
+      <button class="btn btn-primary" id="go" disabled>Find similar products →</button>
+    </div>
+  </div>
+
+  <div class="glass panel" id="out" style="display:none">
+    <h2>Top matches</h2>
+    <div class="results" id="results"></div>
+    <p class="muted" style="margin-top:16px">Similarity is cosine distance between CLIP embeddings (1.00 = identical). Thumbnails aren't bundled in this demo, so matches show product names.</p>
+  </div>
+
+  <p class="foot">Built by Atchutha Sai Kiran · CLIP ViT-B/32 via transformers.js · 100% client-side</p>
+</div>
+
+<script type="module">
+import { pipeline, env, RawImage } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+env.allowLocalModels = false;
+
+const EMOJI = {shoe:'👟',adidas_shoe:'👟',nike_shoe:'👟',flip_flops:'🩴',slippers:'🩴',aeroplane:'✈️',bicycle:'🚲',book:'📘',bottle:'🧴',cap:'🧢',car:'🚗',casio_watch:'⌚',cctv_camera:'📹',coffee_machine:'☕',compass:'🧭',cup:'🥤',drone:'🚁','flower pot':'🪴',fruits:'🍎',gloves:'🧤',hair_dryer:'💨','hard disk':'💽',house:'🏠',knife:'🔪',lamp:'💡',leather_bag:'👜',mobile:'📱',mouse:'🖱️',pen:'🖊️',perfume:'🧴',photo_frame:'🖼️',printer:'🖨️',skin_care:'🧴','sun glasses':'🕶️',sunglasses:'🕶️',speaker:'🔊',suitcase:'🧳',Table:'🪑',umbrella:'☂️',utensils:'🍴',wallet:'👛',washing_machine:'🧺',women_dress:'👗',house2:'🏠'};
+const $=s=>document.querySelector(s);
+const prettify=f=>f.replace(/\.(jpg|jpeg|png)$/i,'').replace(/pexels[-_a-z0-9]*/i,'Product').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim();
+const emojiFor=f=>EMOJI[f.replace(/\.(jpg|jpeg|png)$/i,'')]||'📦';
+
+let FEATURES=null, KEYS=null, extractor=null, queryImg=null;
+
+async function boot(){
+  FEATURES = await fetch('features.json').then(r=>r.json());
+  KEYS = Object.keys(FEATURES);
+  extractor = await pipeline('image-feature-extraction','Xenova/clip-vit-base-patch32');
+  $('#dot').className='dot ok'; $('#statusTxt').textContent='Model ready — give it an image.';
+  window.__ready=true;
+}
+boot().catch(e=>{ $('#statusTxt').textContent='Failed to load the model. Please refresh. ('+e.message+')'; });
+
+function setQuery(src){
+  queryImg=src; const img=$('#previewImg'); img.src=src;
+  $('#preview').style.display='flex'; $('#go').disabled=!(extractor&&FEATURES);
+}
+$('#drop').addEventListener('click',()=>$('#file').click());
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>setQuery(r.result);r.readAsDataURL(f);}});
+['dragover','dragenter'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('over');}));
+['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('over');}));
+$('#drop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>setQuery(r.result);r.readAsDataURL(f);}});
+$('#url').addEventListener('change',e=>{if(e.target.value.trim())setQuery(e.target.value.trim());});
+
+async function embed(src){
+  const img = await RawImage.read(src);
+  const out = await extractor(img);
+  let v = Array.from(out.data);
+  const n = Math.hypot(...v)||1; return v.map(x=>x/n);
+}
+function rankFrom(q){
+  return KEYS.map(k=>{const f=FEATURES[k];let s=0;for(let i=0;i<f.length;i++)s+=f[i]*q[i];return [k,s];})
+             .sort((a,b)=>b[1]-a[1]);
+}
+async function run(){
+  $('#go').disabled=true; $('#statusTxt').textContent='Analyzing image…'; $('#dot').className='dot load';
+  try{
+    const q=await embed(queryImg);
+    const ranked=rankFrom(q).slice(0,6);
+    $('#results').innerHTML=ranked.map(([k,s],i)=>{
+      const pct=Math.max(0,Math.min(100,Math.round(s*100)));
+      return `<div class="res${i===0?' top':''}"><div class="emoji">${emojiFor(k)}</div><div class="name">${prettify(k)}</div><div class="score">${s.toFixed(3)}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+    $('#out').style.display=''; $('#out').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){ $('#statusTxt').textContent='Could not read that image (CORS?). Try uploading a file instead.'; }
+  $('#go').disabled=false; $('#dot').className='dot ok'; $('#statusTxt').textContent='Model ready — give it an image.';
+}
+$('#go').addEventListener('click',run);
+
+// validation hook for automated testing
+window.__rankURL = async (u)=>{ const q=await embed(u); return rankFrom(q).slice(0,6).map(([k,s])=>[k,+s.toFixed(3)]); };
+</script>
+</body>
+</html>
