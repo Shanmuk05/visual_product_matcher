@@ -28,6 +28,7 @@ h1 em{font-style:italic;font-weight:300;background:linear-gradient(100deg,#fff6d
 .status{display:flex;align-items:center;gap:12px;font:500 14px var(--sans);color:var(--soft);margin-bottom:18px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
 .dot.load{animation:pulse 1.2s infinite}.dot.ok{background:var(--moss);box-shadow:0 0 12px var(--moss)}
+.loadbar{height:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:-6px 0 16px}.loadbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold2),var(--gold));transition:width .3s}.loadbar.done{display:none}
 @keyframes pulse{50%{opacity:.25}}
 .inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:620px){.inputs{grid-template-columns:1fr}}
@@ -70,7 +71,8 @@ h2{font-family:var(--serif);font-weight:600;font-size:24px;margin-bottom:16px}
   <p class="lede">Upload or paste a product image and OpenAI's <strong>CLIP</strong> model finds the most visually similar items in a 44-product catalog by comparing image embeddings — all computed locally in your browser. Nothing is uploaded to a server.</p>
 
   <div class="glass panel">
-    <div class="status"><span class="dot load" id="dot"></span><span id="statusTxt">Loading the CLIP vision model (first load downloads ~85 MB, once)…</span></div>
+    <div class="status"><span class="dot load" id="dot"></span><span id="statusTxt">Starting the CLIP vision model…</span></div>
+    <div class="loadbar" id="loadbar"><i id="loadfill"></i></div>
     <div class="inputs">
       <label class="drop" id="drop">
         <input type="file" id="file" accept="image/*" hidden>
@@ -109,14 +111,30 @@ const emojiFor=f=>EMOJI[f.replace(/\.(jpg|jpeg|png)$/i,'')]||'📦';
 
 let FEATURES=null, KEYS=null, extractor=null, queryImg=null;
 
+const files={};
+function onProgress(p){
+  if(p.status==='progress'&&p.total){ files[p.file]={loaded:p.loaded,total:p.total};
+    let l=0,t=0; Object.values(files).forEach(f=>{l+=f.loaded;t+=f.total;});
+    const pct=t?Math.min(100,Math.round(l/t*100)):0;
+    $('#loadfill').style.width=pct+'%';
+    $('#statusTxt').textContent=`Downloading vision model… ${pct}%  (one-time, then cached)`;
+  } else if(p.status==='ready'){ /* handled after */ }
+}
 async function boot(){
+  $('#statusTxt').textContent='Loading catalog…';
   FEATURES = await fetch('features.json').then(r=>r.json());
   KEYS = Object.keys(FEATURES);
-  extractor = await pipeline('image-feature-extraction','Xenova/clip-vit-base-patch32');
+  $('#statusTxt').textContent='Downloading vision model… (first time only)';
+  extractor = await pipeline('image-feature-extraction','Xenova/clip-vit-base-patch32',{progress_callback:onProgress});
   $('#dot').className='dot ok'; $('#statusTxt').textContent='Model ready — give it an image.';
+  $('#loadbar').classList.add('done');
+  if($('#go')&&queryImg) $('#go').disabled=false;
   window.__ready=true;
 }
-boot().catch(e=>{ $('#statusTxt').textContent='Failed to load the model. Please refresh. ('+e.message+')'; });
+boot().catch(e=>{
+  $('#dot').className='dot'; 
+  $('#statusTxt').innerHTML='Could not load the model. Check your connection and <a href="#" onclick="location.reload();return false">try again</a>. <span class="muted">('+(e&&e.message||e)+')</span>';
+});
 
 function setQuery(src){
   queryImg=src; const img=$('#previewImg'); img.src=src;
